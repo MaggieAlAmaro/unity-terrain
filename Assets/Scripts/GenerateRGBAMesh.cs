@@ -10,18 +10,21 @@ using Unity.Jobs;
 
 
 
-public class HeightData
+public class RGBAHeightData
 {
     public float[][] elevation;
+    public Texture2D rgbTexture;
+    public Texture2D aTexture;
 
-    public HeightData(Texture2D heightmap)
+    public RGBAHeightData(Texture2D heightmap)
     {
         Color[] colors = heightmap.GetPixels();
+
         elevation = new float[heightmap.height][];
         for (int i = 0; i < heightmap.height; i++)   
         {
             elevation[i] = new float[heightmap.width];
-            elevation[i] = colors[(i * heightmap.width)..(((i + 1) * heightmap.width))].Select(color => color.r).ToArray();
+            elevation[i] = colors[(i * heightmap.width)..(((i + 1) * heightmap.width))].Select(color => color.a).ToArray();
         }
         Debug.Log("Image Processed");
         Debug.Log("Scaling...");
@@ -32,6 +35,40 @@ public class HeightData
                 elevation[i][j] = Scale(elevation[i][j]);
             }
         }
+
+
+        Color[] aColors = heightmap.GetPixels();
+        for (int i = 0; i < aColors.Length; i++)
+        {
+            aColors[i].r = aColors[i].a;
+            aColors[i].g = aColors[i].a;
+            aColors[i].b = aColors[i].a;
+            aColors[i].a = 1;
+        }
+
+        Debug.Log(aColors[7]);
+
+        aTexture = new Texture2D(heightmap.width, heightmap.height);
+
+        for (int h = 0; h < heightmap.height; h++)
+            for (int w = 0; w < heightmap.width; w++)
+                aTexture.SetPixel(w, h, aColors[h * heightmap.width + w]);
+        aTexture.Apply();
+
+
+        for (int i = 0; i < colors.Length; i++)
+        {
+            colors[i].a = 1;
+        }
+
+        //colors.Select(color => color.a = 1);
+
+        rgbTexture = new Texture2D(heightmap.width, heightmap.height);
+
+        for (int h = 0; h < heightmap.height; h++)
+            for (int w = 0; w < heightmap.width; w++)
+                rgbTexture.SetPixel(w, h, colors[h * heightmap.width + w]);
+        rgbTexture.Apply();
 
 
 
@@ -56,54 +93,19 @@ public class HeightData
 }
 
 
-public struct MeshJob : IJob
-{
-
-    Vector3[] _vertices;
-    int[] _triangles;
-    int _myIndexX;
-    int _myIndexY;
-    int _mySizeX;
-    int _mySizeY;
-
-    public MeshJob(
-        Vector3[] vertices, 
-        int[] triangles,
-        int myIndexX,
-        int myIndexY,
-        int mySizeX,
-        int mySizeY
-        )
-    {
-        _vertices = vertices;
-        _triangles = triangles;
-        _myIndexX = myIndexX;
-        _myIndexY = myIndexY;
-        _mySizeX = mySizeX;
-        _mySizeY = mySizeY;
-    }
-    public void Execute()
-    {
-        Camera c = Camera.main;
-
-    }
-}
-
-
 [RequireComponent(typeof(MeshFilter))]
-public class GenerateMesh : MonoBehaviour
+public class GenerateRGBAMesh : MonoBehaviour
 {
 
     [SerializeField] private Texture2D heightmap;
-    [SerializeField] private Texture2D heightmapColor;
-
 
 
     private Vector3[] vertices;
     private int[] triangles;
     private Vector2[] UVs;
-    private HeightData data;
+    private RGBAHeightData data;
 
+    public bool RGBTexture;
 
     //[SerializeField]
     private int height;
@@ -119,7 +121,7 @@ public class GenerateMesh : MonoBehaviour
     private MeshRenderer meshRenderer;
     private Material mat;
 
-
+    private bool textureState;
     int currentTriangle;
 
     void Start()
@@ -144,11 +146,14 @@ public class GenerateMesh : MonoBehaviour
         triangles = new int[(height - 1) * (width - 1) * 6];
         UVs = new Vector2[width * height];
 
-        data = new HeightData(heightmap);
+        data = new RGBAHeightData(heightmap);
 
-
+        textureState = RGBTexture;
+        if (!RGBTexture)
+            meshRenderer.material.SetTexture("_MainTex", data.aTexture);
+        else
+            meshRenderer.material.SetTexture("_MainTex", data.rgbTexture);
         DrawMesh();
-        meshRenderer.material.SetTexture("_MainTex", heightmapColor);
     }
 
     public JobHandle DrawMeshJob()
@@ -160,12 +165,20 @@ public class GenerateMesh : MonoBehaviour
 
     void Update()
     {
+        if(RGBTexture != textureState)
+        {
+            if (!RGBTexture)
+                meshRenderer.material.SetTexture("_MainTex", data.aTexture);
+            else
+                meshRenderer.material.SetTexture("_MainTex", data.rgbTexture);
+            textureState = RGBTexture;
+        }
         //JobHandle jhandle = DrawMeshJob();
         //jhandle.Complete();
         /*
         Mesh mesh = GetComponent<MeshFilter>().mesh;
         Vector3[] vertices = mesh.vertices;
-        Vector3[] normals = mesh.normals;
+        Vector3[] normals = mesh.normals;   
 
         for (var i = 0; i < vertices.Length; i++)
         {

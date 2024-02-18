@@ -5,6 +5,106 @@ using System.Linq;
 using System.IO;
 
 
+public enum ImageType
+{
+    RedOnly,
+    RGBRemoveA,
+    RGBA,
+    RGB,
+    AlphaOnly,
+    Unkown,
+
+    ImageTypeCount
+}
+
+public class TextureSplitter
+{
+
+    static public Texture2D[,] GetChunkOfTexture(Texture2D texture, ImageType textureType, int chunkSize)
+    {
+        //Assume squared
+        int size = texture.width;
+        Color[] colors = TreatPixelColor(texture.GetPixels(), textureType);
+
+
+        int rows = size / chunkSize;
+        Texture2D[,] textureChunks = new Texture2D[rows, rows];
+        
+
+        for (int i = 0; i < size; i += chunkSize)
+        {
+            for (int j = 0; j < size; j += chunkSize)
+            {
+                textureChunks[i/ chunkSize, j/chunkSize] = GetChunkInIndex(colors,size,i,j,i+chunkSize,j+chunkSize);
+
+            }
+        }
+        return textureChunks;
+    }
+
+    static private Color[] TreatPixelColor(Color[] colors, ImageType textureType)
+    {
+/*        if (textureType == ImageType.Unkown)
+        {
+            if (heightmap.format == TextureFormat.BC4)
+            {
+                textureType == ImageType.Red;
+            }
+            else
+            {
+                textureType == ImageType.Red;
+            }
+
+        }*/
+
+        if (textureType == ImageType.RedOnly)
+        {
+            for (int i = 0; i < colors.Length; i++)
+            {
+                
+                colors[i].r = colors[i].r;
+                colors[i].g = colors[i].r;
+                colors[i].b = colors[i].r;
+                colors[i].a = 1;
+
+            }
+        }
+        else if (textureType == ImageType.AlphaOnly)
+        {
+            for (int i = 0; i < colors.Length; i++)
+            {
+                colors[i].r = colors[i].a;
+                colors[i].g = colors[i].a;
+                colors[i].b = colors[i].a;
+                colors[i].a = 1;
+            }
+        }
+
+        Debug.Log("Treated Colors ");
+        return colors;
+    }
+
+
+    static private Texture2D GetChunkInIndex(Color[] colorArray, int size, int startX, int startY, int endX, int endY)
+    {
+        var chunkSize = endX - startX;
+        Texture2D chunkTexture = new Texture2D(chunkSize, chunkSize);
+        for (int w = startX; w < endX; w++)
+        {
+            for (int h = startY; h < endY; h++)
+            {
+                var a = colorArray[w * size + h];
+                chunkTexture.SetPixel(h, w, a);
+            }
+        }
+        chunkTexture.Apply();
+        return chunkTexture;
+    }
+
+
+}
+
+
 public class ImportPNG
 {
     public static Texture2D LoadPNG(string filePath)
@@ -27,6 +127,8 @@ public class TerrainManager : MonoBehaviour
 {
 
     [SerializeField] private Texture2D heightmap;
+    [SerializeField] private Texture2D texture;
+    private Texture2D[,] textures;
     private int width;
     private int height;
 
@@ -50,6 +152,8 @@ public class TerrainManager : MonoBehaviour
 
     void Start()
     {
+
+
         if(heightmap.format == TextureFormat.BC4)
         {
             heightData = new HeightData(heightmap);
@@ -64,9 +168,13 @@ public class TerrainManager : MonoBehaviour
             isRGBA = true;
         }
         textureState = true;
+        if (texture != null)
+        {
+            textures = TextureSplitter.GetChunkOfTexture(texture, ImageType.RedOnly, chunkSize);
+            canToggleTexture = false;
+        }
 
-
-       height = heightmap.height;
+        height = heightmap.height;
         width = heightmap.width;
 
 
@@ -92,26 +200,33 @@ public class TerrainManager : MonoBehaviour
         for (int i = 0; i < chunkRows; i++)
             for (int j = 0; j < chunkRows; j++)
                 terrainObjs[i,j] = GenerateMeshObject();
-            
 
 
+        float offsetZ = (chunkRows* chunkSize ) / 2f;
+        float offsetX = (chunkRows * chunkSize) / 2f;
         for (int i = 0; i < Mathf.Sqrt(chunks) * chunkSize; i += chunkSize)
         {
             for (int j = 0; j < Mathf.Sqrt(chunks) * chunkSize; j += chunkSize)
             {
-                var tex = heightData.GetChunkOfTexture(i, j, i + chunkSize, j + chunkSize);
+
+                int indI = i / chunkSize;
+                int indJ = j / chunkSize;
+                Texture2D chunkTexture;
+                if(texture != null)
+                {
+                    chunkTexture = textures[indI, indJ];
+                }
+                else
+                    chunkTexture = heightData.GetChunkOfTexture(i, j, i + chunkSize, j + chunkSize);
 
                 float[][] subArr = heightData.elevation.Skip(i).Take(chunkSize).Select(
                     (each_row) => each_row.Skip(j).Take(chunkSize).ToArray()).ToArray();
 
                 MeshData meshData = new MeshData(subArr);
-
-                int indI = i / chunkSize;
-                int indJ = j / chunkSize;
-                terrainObjs[indI, indJ].transform.position = new Vector3(-j, 0, -i);
+                terrainObjs[indI, indJ].transform.position = new Vector3(offsetX - j, 0, offsetZ - i);
                 //terrainObjs[tIndex].transform.rotation = Quaternion.Euler(0,180,0);
                 terrainObjs[indI, indJ].GetComponent<MeshFilter>().mesh = meshData.GetMesh();
-                terrainObjs[indI, indJ].GetComponent<MeshRenderer>().material.SetTexture("_MainTex", tex);
+                terrainObjs[indI, indJ].GetComponent<MeshRenderer>().material.SetTexture("_MainTex", chunkTexture);
             }
         }
 

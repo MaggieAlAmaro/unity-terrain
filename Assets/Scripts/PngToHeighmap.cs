@@ -68,7 +68,7 @@ class HeightData : IHeightData
             {
                 elevation[i][j] = ImageScaler.Scale(elevation[i][j]);
             }
-            
+
         }
 
         aColors = heightmap.GetPixels();

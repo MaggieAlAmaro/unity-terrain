@@ -29,15 +29,22 @@ public class TextureSplitter
 
         int rows = size / chunkSize;
         Texture2D[,] textureChunks = new Texture2D[rows, rows];
-        
 
-        for (int i = 0; i < size; i += chunkSize)
+        int rowCount = 0;
+        int colCount = 0;
+
+        for (int i = 0; i < size - rows; i += chunkSize)
         {
-            for (int j = 0; j < size; j += chunkSize)
+            if (i - 1 < 0) i = 0; else i -= 1;
+            for (int j = 0; j < size - rows; j += chunkSize)
             {
-                textureChunks[i/ chunkSize, j/chunkSize] = GetChunkInIndex(colors,size,i,j,i+chunkSize,j+chunkSize);
+                if (j - 1 < 0) j = 0; else j -= 1;
+                textureChunks[rowCount, colCount] = GetChunkInIndex(colors,size,i,j,i+chunkSize,j+chunkSize);
+                colCount++;
 
             }
+            rowCount++;
+            colCount = 0;
         }
         return textureChunks;
     }
@@ -170,7 +177,13 @@ public class TerrainManager : MonoBehaviour
         textureState = true;
         if (texture != null)
         {
-            textures = TextureSplitter.GetChunkOfTexture(texture, ImageType.RedOnly, chunkSize);
+            ImageType type = ImageType.Unkown;
+            if (heightmap.format == TextureFormat.BC4)
+                type = ImageType.RedOnly;
+            else
+                type = ImageType.RGB;
+
+            textures = TextureSplitter.GetChunkOfTexture(texture, type, chunkSize);
             canToggleTexture = false;
         }
 
@@ -188,8 +201,60 @@ public class TerrainManager : MonoBehaviour
         chunks = (int)Mathf.Pow(chunkRows, 2.0f);
 
 
-        SplitIntoChunks();
+        SplitIntoChunksWithoutGap();
 
+
+    }
+
+
+    //The next chunk will start on the last index of the previous chunk
+    void SplitIntoChunksWithoutGap()
+    {
+        terrainObjs = new GameObject[chunkRows, chunkRows];
+        for (int i = 0; i < chunkRows; i++)
+            for (int j = 0; j < chunkRows; j++)
+                terrainObjs[i, j] = GenerateMeshObject();
+
+
+        float offsetZ = (chunkRows * chunkSize) / 2f;
+        float offsetX = (chunkRows * chunkSize) / 2f;
+        int rowCount = 0;
+        int colCount = 0;
+
+        for (int i = 0; i < (Mathf.Sqrt(chunks) * chunkSize) - chunkRows; i += chunkSize)
+        {
+
+            if (i - 1 < 0) i = 0; else i -= 1;
+
+            for (int j = 0; j < (Mathf.Sqrt(chunks) * chunkSize ) - chunkRows; j += chunkSize)
+            {
+
+                int indJ = colCount;
+                int indI = rowCount;
+                if (j - 1 < 0) j = 0; else j -= 1;
+                Texture2D chunkTexture;
+                if (texture != null)
+                {
+                    chunkTexture = textures[indI, indJ];
+                }
+                else
+                    chunkTexture = heightData.GetChunkOfTexture(i, j, i + chunkSize, j + chunkSize);
+
+                float[][] subArr = heightData.elevation.Skip(i).Take(chunkSize).Select(
+                    (each_row) => each_row.Skip(j).Take(chunkSize).ToArray()).ToArray();
+
+                MeshData meshData = new MeshData(subArr);
+                terrainObjs[indI, indJ].transform.position = new Vector3(offsetX - j, 0, offsetZ - i);
+                //terrainObjs[tIndex].transform.rotation = Quaternion.Euler(0,180,0);
+                terrainObjs[indI, indJ].GetComponent<MeshFilter>().mesh = meshData.GetMesh();
+                terrainObjs[indI, indJ].GetComponent<MeshRenderer>().material.SetTexture("_MainTex", chunkTexture);
+                colCount++;
+            }
+            rowCount++;
+            colCount = 0;
+        }
+
+        //TODO - REMAINING CHUNK, on y, x and then the little square in the corner
 
     }
 
@@ -259,9 +324,17 @@ public class TerrainManager : MonoBehaviour
                 var data = (RGBAHeightData)heightData;
                 if (!displayRGBTexture)
                 {
-                    data.SetAlphaTexture();
-                    UpdateTexture();
-                    //meshRenderer.material.SetTexture("_MainTex", data.aTexture);
+                    if(texture!= null)
+                    {
+                        Debug.Log("Here.");
+                    }
+                    else
+                    {
+                        data.SetAlphaTexture();
+                        UpdateTexture();
+                        //meshRenderer.material.SetTexture("_MainTex", data.aTexture);
+
+                    }
                 }
                 else
                 {
@@ -340,15 +413,17 @@ public class MeshData
     {
         float offsetZ = (chunkSize - 1) / 2f;
         float offsetX = (chunkSize - 1) / 2f;
-        for (int j = 0; j <  chunkSize; j++)
+        for (int j = 0; j < chunkSize; j++)
         {
-            for (int i = 0; i <  chunkSize; i++)
+            for (int i = 0; i < chunkSize; i++)
             {
-                vertices[chunkSize * j + i] = new Vector3(offsetX - i, splitArray[j][i], offsetZ - j);
+                vertices[chunkSize * j + i] = new Vector3((offsetX - i), splitArray[j][i], (offsetZ - j));
                 UVs[chunkSize * j + i] = new Vector2(i / (float)chunkSize, j / (float)chunkSize);
             }
         }
     }
+
+
 
     public void AddTriangle(int a, int b, int c)
     {

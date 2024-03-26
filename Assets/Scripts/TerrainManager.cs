@@ -136,8 +136,9 @@ public class TerrainManager : MonoBehaviour
     [SerializeField] private Texture2D heightmap;
     [SerializeField] private Texture2D texture;
     private Texture2D[,] textures;
-    private int width;
+    private int width { get; set; }
     private int height;
+    public int Height { get => height; }
 
     private bool isRGBA;
     private bool canToggleTexture;
@@ -155,6 +156,8 @@ public class TerrainManager : MonoBehaviour
 
     private GameObject[,] terrainObjs;
 
+
+    
 
 
     void Start()
@@ -208,7 +211,7 @@ public class TerrainManager : MonoBehaviour
 
 
     //The next chunk will start on the last index of the previous chunk
-    void SplitIntoChunksWithoutGap()
+    public void SplitIntoChunksWithoutGap()
     {
         terrainObjs = new GameObject[chunkRows, chunkRows];
         for (int i = 0; i < chunkRows; i++)

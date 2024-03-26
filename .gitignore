@@ -1,4 +1,7 @@
-/Assets/Heightmaps/
+/Assets/Heightmaps/Generated/*.png
+/Assets/Heightmaps/Generated/*.meta
+/Assets/Heightmaps/Generated/masks
+/Assets/Heightmaps/Real/
 
 # This .gitignore file should be placed at the root of your Unity project directory
 #

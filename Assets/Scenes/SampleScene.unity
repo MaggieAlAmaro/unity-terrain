@@ -1396,7 +1396,7 @@ MonoBehaviour:
   m_ChildAlignment: 0
   rows: 2
   cols: 2
-  cellSize: {x: 117.313324, y: 52.1875}
+  cellSize: {x: 80.00818, y: 52.1875}
 --- !u!1 &354969680
 GameObject:
   m_ObjectHideFlags: 0
@@ -4465,8 +4465,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6b3e7bb5242b70f43bce9f9763dccbb4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  heightmap: {fileID: 2800000, guid: 67f530b0492caac4cbc62a6619bff97b, type: 3}
-  texture: {fileID: 2800000, guid: 45cc66a9bc18e554c8c2c583dced675a, type: 3}
+  heightmap: {fileID: 2800000, guid: 9c5dbeb43c6b44f448f9f1ca89faa8ca, type: 3}
+  texture: {fileID: 2800000, guid: 546ba34e4409a4247951a4a967f094d7, type: 3}
   displayRGBTexture: 1
   threads: 0
   chunkSize: 256
@@ -6894,8 +6894,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6b3e7bb5242b70f43bce9f9763dccbb4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  heightmap: {fileID: 2800000, guid: 67f530b0492caac4cbc62a6619bff97b, type: 3}
-  texture: {fileID: 2800000, guid: 2ee172d419c912e4e80a86d31ceee121, type: 3}
+  heightmap: {fileID: 2800000, guid: 9c5dbeb43c6b44f448f9f1ca89faa8ca, type: 3}
+  texture: {fileID: 0}
   displayRGBTexture: 1
   threads: 0
   chunkSize: 256

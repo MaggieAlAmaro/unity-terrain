@@ -6,35 +6,83 @@ public class ViewManager : MonoBehaviour
 {
 
     public Transform lookAtTarget;
+    [SerializeField] private float cameraDistance;
 
-    [SerializeField] private float rotateSpeed = 1f;
-    [SerializeField] private bool rotate;
-    [SerializeField] private Vector2 targetSize;
-    //[SerializeField] private float FromTarget;
-    [SerializeField] private float AngleFromTargetZ;
 
-    // Start is called before the first frame update
+    [SerializeField] private float constRotationSpeed;
+    private float currentAngle;
+    private bool constRotation;
+    private float rotateRadius;
+
     void Start()
     {
 
-        
+        currentAngle = 0;
+        constRotation = false;
+        transform.position = new Vector3(cameraDistance, transform.position.y, 0);
         transform.LookAt(lookAtTarget);
+        rotateRadius = Vector3.Distance(transform.position, lookAtTarget.position);
 
     }
 
-    // Update is called once per frame
+    public void SetDistanceFromTarget(float distance)
+    {
+
+        rotateRadius = Vector3.Distance(transform.position, lookAtTarget.position);
+        var thing = Mathf.Abs(rotateRadius - distance);
+        if (distance > rotateRadius)
+        {
+            var ratio = rotateRadius / distance;
+            transform.position = new Vector3(transform.position.x * ratio, transform.position.y, transform.position.z * ratio);
+
+        }
+        RotateAndLookAtTarget();
+    }
+
+    public void ChangeTarget(Transform target)
+    {
+        lookAtTarget = target;
+        RotateAndLookAtTarget();
+    }
+
+    public void SetRotationAngle(float angleRadians)
+    {
+        constRotation = false;
+        currentAngle = angleRadians;
+        RotateAndLookAtTarget();
+    }
+    public void StopRotation()
+    {
+        constRotation = false;
+    }
+
+    public void StartRotation()
+    {
+        constRotation = true;
+    }
+
+    public void ToggleRotation()
+    {
+        constRotation = !constRotation;
+    }
+
+    private void RotateAndLookAtTarget()
+    {
+        transform.position = new Vector3(lookAtTarget.position.x + Mathf.Cos(currentAngle) * rotateRadius, transform.position.y, lookAtTarget.position.z - Mathf.Sin(currentAngle) * rotateRadius);
+        Vector3 lookDirection = lookAtTarget.position - transform.position;
+        transform.rotation = Quaternion.LookRotation(lookDirection);
+
+    }
+
+
     void Update()
     {
-        if (rotate)
+        if (constRotation)
         {
-            //transform = transform.Rotate(lookAtTarget.position, rotateSpeed);
-            //transform.LookAt(lookAtTarget);
-            transform.Rotate(0.0f, 2.0f, 0.0f, Space.Self);
+            currentAngle += constRotationSpeed;
+            currentAngle %= (Mathf.PI * 2);
+            RotateAndLookAtTarget();
 
-            Debug.Log("New posiion:" + transform.position);
-            /*var dis = transform.position - lookAtTarget.position;
-            transform.position = new Vector3(Mathf.Cos(transform.position.x + rotateSpeed) * dis.x, transform.position.y, Mathf.Sin(transform.position.z + rotateSpeed) * dis.z);
-            */
         }
     }
 }
